@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>શાળા વિદ્યાર્થી માહિતી કેન્દ્ર</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#eef2f9; --card:#ffffff; --pri:#1e5eff; --pri2:#7a3cff; --txt:#131c33;
+  --mut:#6b7590; --line:#e2e8f4; --ok:#0aa06e; --warn:#e8a100; --bad:#e5484d; --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Noto Sans Gujarati','Segoe UI',system-ui,-apple-system,'Nirmala UI',sans-serif;
+  background:var(--bg); color:var(--txt); -webkit-tap-highlight-color:transparent;
+  font-size:15px; line-height:1.5;
+}
+/* Header & Tabs */
+.app-header{background:linear-gradient(135deg,#1e5eff,#7a3cff); color:#fff; padding:16px 18px; display:flex; gap:14px; align-items:center; box-shadow:0 4px 20px rgba(30,94,255,.25); position:sticky; top:0; z-index:50;}
+.app-header .logo{font-size:30px; line-height:1}
+.app-header h1{margin:0; font-size:19px; font-weight:700;}
+.app-header p{margin:2px 0 0; font-size:12.5px; opacity:.9}
+.tabs{display:flex; gap:8px; padding:10px 12px; overflow-x:auto; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:64px; z-index:40; scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{border:1px solid var(--line); background:#f7f9ff; color:var(--mut); padding:9px 16px; border-radius:999px; font-size:14px; font-weight:600; white-space:nowrap; cursor:pointer; font-family:inherit; transition:.18s;}
+.tab-btn.active{background:linear-gradient(135deg,#1e5eff,#7a3cff); color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(30,94,255,.3)}
+main{padding:14px; max-width:1400px; margin:0 auto 60px}
+.tab-panel{display:none; animation:fade .25s ease}
+.tab-panel.active{display:block}
+@keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+
+/* Cards & UI */
+.card{background:var(--card); border-radius:var(--r); padding:16px; box-shadow:0 2px 14px rgba(20,40,90,.07); margin-bottom:14px}
+.card h2{margin:0 0 12px; font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px; color:var(--pri)}
+.mut{color:var(--mut); font-size:13px}
+.dropzone{border:2.5px dashed #b9c8ea; border-radius:var(--r); padding:34px 16px; text-align:center; background:#f8faff; cursor:pointer; transition:.2s;}
+.dropzone:hover,.dropzone.drag{background:#eef4ff; border-color:var(--pri)}
+.dropzone .big{font-size:44px; display:block; margin-bottom:8px}
+.dropzone b{color:var(--pri)}
+.btn{border:none; background:linear-gradient(135deg,#1e5eff,#7a3cff); color:#fff; padding:10px 18px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:.18s; box-shadow:0 3px 12px rgba(30,94,255,.25);}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:#fff; color:var(--pri); border:1.5px solid #cfdcff; box-shadow:none}
+.btn.ok{background:linear-gradient(135deg,#0aa06e,#12c48a); box-shadow:0 3px 12px rgba(10,160,110,.25)}
+.btn.warn{background:linear-gradient(135deg,#e8a100,#ffc233); box-shadow:0 3px 12px rgba(232,161,0,.25); color:#3a2a00}
+.btn.sm{padding:6px 12px; font-size:13px; border-radius:8px}
+.btn-edit{background:#eef2fa; border:none; border-radius:4px; cursor:pointer; color:#1e5eff; padding:2px 6px; margin-left:5px; font-size:12px;}
+.btn-edit:hover{background:#cfdcff;}
+.toolbar{display:flex; flex-wrap:wrap; gap:9px; margin-bottom:12px; align-items:center}
+.toolbar input,.toolbar select{padding:9px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:inherit; font-size:14px; background:#fbfcff; color:var(--txt); outline:none; flex:1 1 160px; min-width:0;}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--pri); background:#fff}
+.table-wrap{overflow:auto; border-radius:12px; border:1px solid var(--line); -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:13.5px}
+thead th{background:#f2f6ff; color:#2b3a63; font-weight:700; padding:10px 9px; text-align:right; border-bottom:2px solid #dbe5fa; white-space:nowrap; position:sticky; top:0; z-index:2;}
+tbody td{padding:9px; border-bottom:1px solid #eef2fa; text-align:right; white-space:nowrap}
+tbody tr:hover{background:#f8faff}
+.gu{font-weight:600}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:11px;}
+.field{display:flex; flex-direction:column; gap:5px}
+.field label{font-size:12.5px; font-weight:700; color:var(--mut)}
+.field input,.field select{padding:9px 12px; border:1.5px solid var(--line); border-radius:10px; font-family:inherit; font-size:14px; background:#fbfcff; outline:none;}
+.field input:focus,.field select:focus{border-color:var(--pri); background:#fff}
+.chk-group{display:flex; flex-wrap:wrap; gap:10px; margin-top:10px}
+.chk-item{display:flex; align-items:center; gap:5px; font-size:14px; cursor:pointer}
+.chk-item input{width:16px; height:16px; accent-color:var(--pri)}
+
+/* Dashboard Specific Styles */
+.stats{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:11px; margin-bottom:15px;}
+.stat{background:#fff; border-radius:14px; padding:14px; border-left:5px solid var(--pri); box-shadow:0 2px 10px rgba(20,40,90,.06)}
+.stat .v{font-size:26px; font-weight:800; line-height:1.1}
+.stat .k{font-size:12.5px; color:var(--mut); font-weight:600; margin-top:2px}
+.stat.c2{border-left-color:#0aa06e}.stat.c3{border-left-color:#e8a100}.stat.c4{border-left-color:#e5484d}.stat.c5{border-left-color:#7a3cff}.stat.c6{border-left-color:#00b8d9}
+.bar-row{display:grid; grid-template-columns:110px 1fr 44px; gap:10px; align-items:center; margin-bottom:8px; font-size:13.5px}
+.bar-track{background:#eef2fa; border-radius:8px; height:20px; overflow:hidden}
+.bar-fill{height:100%; border-radius:8px; background:linear-gradient(90deg,#1e5eff,#7a3cff); transition:width .5s}
+.bar-num{text-align:right; font-weight:700; color:var(--pri)}
+.pill{display:inline-block; background:#eef3ff; color:var(--pri); border-radius:999px; padding:3px 11px; font-size:12.5px; font-weight:700; margin:2px}
+
+/* Modal */
+.modal{position:fixed; inset:0; background:rgba(12,20,40,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:200}
+.modal.show{display:flex}
+.modal-box{background:#fff; border-radius:18px; max-width:640px; width:100%; max-height:88vh; overflow:auto; padding:20px}
+.modal-box h3{margin:0 0 12px; font-size:17px}
+.kv{display:grid; grid-template-columns:44% 56%; gap:2px 10px; font-size:13.5px}
+.kv div{padding:6px 0; border-bottom:1px dashed #e8eefb}
+.kv .k{color:var(--mut); font-weight:600}
+.kv .v{font-weight:600}
+
+@media (max-width:640px){
+  .hide-sm{display:none !important}
+  main{padding:10px}
+  .card{padding:13px}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">🎓</div>
+  <div>
+    <h1>શાળા વિદ્યાર્થી માહિતી કેન્દ્ર</h1>
+    <p id="schoolLine">એક્સેલ ફાઇલ અપલોડ કરો…</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="upload">📤 ફાઇલ અપલોડ</button>
+  <button class="tab-btn" data-tab="dash">📊 ડેશબોર્ડ</button>
+  <button class="tab-btn" data-tab="students">👨‍🎓 વિદ્યાર્થી યાદી</button>
+  <button class="tab-btn" data-tab="register">🖨️ હાજરી રજિસ્ટર</button>
+  <button class="tab-btn" data-tab="cert">📜 પ્રમાણપત્રો</button>
+  <button class="tab-btn" data-tab="custom">📊 કસ્ટમ ટેબલ</button>
+</nav>
+
+<main>
+  <!-- ================= UPLOAD ================= -->
+  <section id="tab-upload" class="tab-panel active">
+    <div class="card">
+      <h2>📤 એક્સેલ ફાઇલ અપલોડ કરો</h2>
+      <div class="dropzone" id="dropzone">
+        <span class="big">📄</span>
+        <b>ફાઇલ પસંદ કરવા અહીં ક્લિક કરો</b> અથવા ફાઇલને અહીં ખેંચીને મૂકો<br>
+        <span class="mut">.xls / .xlsx / .csv — UDISE વિદ્યાર્થી યાદી ફોર્મેટ</span>
+        <input type="file" id="fileInput" accept=".xls,.xlsx,.csv" hidden>
+      </div>
+      <div id="uploadStatus" class="mut" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+<!-- ================= DASHBOARD ================= -->
+  <section id="tab-dash" class="tab-panel">
+    <div class="card"><h2>📊 એક નજરમાં</h2><div class="stats" id="statBox"></div></div>
+    <div class="card"><h2>🏫 ધોરણ પ્રમાણે વિદ્યાર્થી સંખ્યા</h2><div id="classBars"></div></div>
+    <div class="card"><h2>👥 કેટેગરી પ્રમાણે</h2><div id="catBars"></div></div>
+    <div class="card"><h2>🩺 વિશેષ નોંધ</h2><div id="specialBox"></div></div>
+  </section>
+
+  <!-- ================= STUDENTS LIST ================= -->
+  <section id="tab-students" class="tab-panel">
+    <div class="card">
+      <div class="toolbar">
+        <select id="fClass"><option value="">બધા ધોરણ</option></select>
+        <input id="fSearch" placeholder="🔍 નામ / ગ્રા.નં. / યુડાઇસ…">
+        <button class="btn ghost sm" id="btnClearNames" style="flex:0 0 auto; color:#e5484d; border-color:#fca5a5;">🔄 નામ રીસેટ કરો</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tblStudents">
+          <thead><tr>
+            <th>#</th><th style="text-align:right;">વિદ્યાર્થીનું નામ (અટક+નામ+વાલી)</th>
+            <th class="hide-sm">ધોરણ</th><th>ગ્રા.નં.</th><th>જન્મ તારીખ</th>
+            <th class="hide-sm">જાતિ</th><th class="hide-sm">મોબાઈલ</th><th class="hide-sm">યુડાઇસ આઈડી</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="listCount" class="mut" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ================= PRINT REGISTER ================= -->
+  <section id="tab-register" class="tab-panel">
+    <div class="card">
+      <h2>🖨️ હાજરી રજિસ્ટર પ્રિન્ટ (લીગલ પેજ)</h2>
+      <div class="grid2" style="margin-bottom:15px;">
+        <div class="field"><label>ધોરણ પસંદ કરો</label><select id="regClass"><option value="">ધોરણ પસંદ કરો</option></select></div>
+        <div class="field"><label>વર્ગશિક્ષકનું નામ</label><input id="regTeacher" placeholder="વર્ગશિક્ષકનું નામ"></div>
+        <div class="field"><label>શાળાની સ્થાપના વર્ષ</label><input id="regEstYear" value="1954"></div>
+        <div class="field"><label>જિલ્લા શિક્ષણ સમિતિ</label><input id="regDistComm" value="ગુજરાત પંચાયત શિક્ષણ સમિતિ પાલનપુર (બનાસકાંઠા) સંચાલિત"></div>
+        <div class="field"><label>મહિનો (સિંગલ પ્રિન્ટ માટે)</label><select id="regMonth"></select></div>
+        <div class="field"><label>વર્ષ</label><input id="regYear" type="number" value="2026"></div>
+      </div>
+      
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px">
+        <button class="btn warn" id="btnPrintFront">1️⃣ ફ્રન્ટ પેજ પ્રિન્ટ</button>
+        <button class="btn ok" id="btnPrintInfo">2️⃣ સામાન્ય માહિતી પ્રિન્ટ</button>
+        <button class="btn" id="btnPrintAtt">3️⃣ હાજરી પત્રક પ્રિન્ટ (આ મહિનો)</button>
+        <button class="btn ghost" id="btnPrintAll"><b>📚 આખું વર્ષ રજિસ્ટર પ્રિન્ટ (જૂન થી મે)</b></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CERTIFICATES ================= -->
+  <section id="tab-cert" class="tab-panel">
+    <div class="card">
+      <h2>📜 પ્રમાણપત્રો અને ફોર્મ</h2>
+      <div class="grid2" style="margin-bottom:15px">
+        <div class="field" style="grid-column:1/-1">
+          <label>વિદ્યાર્થી પસંદ કરો</label>
+          <input id="certSearch" placeholder="🔍 નામ લખીને શોધો…" style="margin-bottom:6px">
+          <select id="certStudent"></select>
+        </div>
+        <div class="field"><label>જન્મ તારીખ</label><input id="certDob" placeholder="dd/mm/yyyy"></div>
+        <div class="field"><label>શાળામાં દાખલ તારીખ</label><input id="certAdm" placeholder="dd/mm/yyyy"></div>
+        <div class="field"><label>શાળા છોડ્યાની તારીખ</label><input id="certLeave" placeholder="dd/mm/yyyy"></div>
+        <div class="field"><label>છેલ્લે પાસ થયેલ ધોરણ</label><input id="certLastExam" placeholder="ધોરણ"></div>
+        <div class="field"><label>શાળા છોડવાનું કારણ</label>
+          <select id="certReason"><option>અભ્યાસ પૂર્ણ થયો</option><option>સ્થળાંતર</option><option>અન્ય શાળામાં પ્રવેશ</option></select>
+        </div>
+        <div class="field"><label>વર્તન</label><input id="certConduct" value="સારું"></div>
+      </div>
+      
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn sm" id="btnLC">🎓 એલ.સી. (L.C.)</button>
+        <button class="btn sm" id="btnBonafide">📄 બોનોફાઇડ</button>
+        <button class="btn sm" id="btnDOBCert">🗓️ જન્મ તારીખનો દાખલો</button>
+        <button class="btn sm" id="btnCasteCert">👥 જાતિનો દાખલો</button>
+        <button class="btn sm" id="btnIDCard">🆔 આઈ-કાર્ડ</button>
+        <button class="btn sm" id="btnProfile">📋 વિદ્યાર્થી પ્રોફાઈલ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CUSTOM TABLE ================= -->
+  <section id="tab-custom" class="tab-panel">
+    <div class="card">
+      <h2>📊 કસ્ટમ ટેબલ / ફોર્મેટ બનાવો</h2>
+      <div class="grid2">
+        <div class="field"><label>શીર્ષક</label><input id="custTitle" value="વિદ્યાર્થીઓની યાદી"></div>
+        <div class="field"><label>ધોરણ ફિલ્ટર</label><select id="custClass"><option value="">બધા ધોરણ</option></select></div>
+        <div class="field"><label>ખાલી હરોળ (નીચે)</label><input type="number" id="custEmpty" value="5"></div>
+      </div>
+      <div class="chk-group">
+        <label class="chk-item"><input type="checkbox" id="cChkNo" checked> ક્રમાંક</label>
+        <label class="chk-item"><input type="checkbox" id="cChkName" checked> પૂરું નામ</label>
+        <label class="chk-item"><input type="checkbox" id="cChkGr" checked> ગ્રા.નં.</label>
+        <label class="chk-item"><input type="checkbox" id="cChkDob" checked> જન્મ તારીખ</label>
+        <label class="chk-item"><input type="checkbox" id="cChkCat" checked> જાતિ</label>
+        <label class="chk-item"><input type="checkbox" id="cChkMobile"> મોબાઈલ</label>
+        <label class="chk-item"><input type="checkbox" id="cChkBank"> બેંક A/C</label>
+       <label class="chk-item"><input type="checkbox" id="cChkClass"> ધોરણ</label>
+        <label class="chk-item"><input type="checkbox" id="cChkGender"> જાતિ (પુરુષ/સ્ત્રી)</label>
+        <label class="chk-item"><input type="checkbox" id="cChkUdise"> યુડાઇસ નંબર</label>
+        <label class="chk-item"><input type="checkbox" id="cChkAadhaar"> આધાર નંબર</label>
+        <label class="chk-item"><input type="checkbox" id="cChkDisability"> વિકલાંગતા</label>
+        <label class="chk-item"><input type="checkbox" id="cChkBPL"> BPL</label>
+      </div>
+      <div class="field" style="margin-top:10px; max-width:400px;">
+        <label>નવી કોલમ ઉમેરો (કોમા થી અલગ કરો)</label>
+        <input id="custCustomCols" placeholder="દા.ત. રિમાર્ક્સ, વજન, ઊંચાઈ">
+      </div>
+      <button class="btn warn" id="btnPrintCustom" style="margin-top:15px;">🖨️ કસ્ટમ ફોર્મ પ્રિન્ટ કરો</button>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3 id="modalTitle">વિગત</h3>
+    <div class="kv" id="modalBody"></div>
+    <div style="text-align:left; margin-top:16px"><button class="btn ghost sm" onclick="closeModal()">બંધ કરો</button></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   1. સહાયક ફંક્શન
+   ===================================================================== */
+const GU_DIGITS = '૦૧૨૩૪૫૬૭૮૯';
+const toGujNum = v => String(v).replace(/[0-9]/g, d => GU_DIGITS[+d]);
+const GU_MONTHS = ['જાન્યુઆરી','ફેબ્રુઆરી','માર્ચ','એપ્રિલ','મે','જૂન','જુલાઈ','ઓગસ્ટ','સપ્ટેમ્બર','ઓક્ટોબર','નવેમ્બર','ડિસેમ્બર'];
+const GU_DOW_FULL = ['રવિવાર','સોમવાર','મંગળવાર','બુધવાર','ગુરુવાર','શુક્રવાર','શનિવાર'];
+const EN_DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function todayGu(){
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function formatDOB(dob) {
+  if(!dob) return '';
+  let parts = dob.split('-');
+  if(parts.length === 3 && parts[0].length === 4) return parts[2] + '-' + parts[1] + '-' + parts[0];
+  return dob;
+}
+
+/* =====================================================================
+   2. અંગ્રેજી ➜ ગુજરાતી નામ લિપ્યંતરણ
+   ===================================================================== */
+const GU_DICT = {
+MILAN:'મિલન',HARSHITABEN:'હર્ષિતાબેન',ABHAYKUMAR:'અભયકુમાર',JITENDRA:'જિતેન્દ્ર',ANAND:'આનંદ',ARAV:'અરવ',
+PARTH:'પાર્થ',MAYANKBHAI:'મયંકભાઈ',MAYNKBHAI:'મયંકભાઈ',KAJALBEN:'કાજલબેન',MANISHABEN:'મનીષાબેન',
+SHOBHAGBEN:'શોભાગબેન',DIVYABEN:'દિવ્યાબેન',DHABUBEN:'ધાબુબેન',KAVYABEN:'કાવ્યાબેન',HIMANTIBEN:'હિમાંતીબેન',
+YAMINIBEN:'યામિનીબેન',JAGRUTIBEN:'જાગૃતિબેન',VANDANABEN:'વંદનાબેન',JAYDIPBHAI:'જયદીપભાઈ',AARVIBEN:'આર્વીબેન',
+KULDEEPBHAI:'કુલદીપભાઈ',KULDIPBHAI:'કુલદીપભાઈ',KRISHNABEN:'કૃષ્ણાબેન',JIYANSHIBEN:'જિયાંશીબેન',JIYANSIBEN:'જિયાંસીબેન',
+RAJAL:'રાજલ',SUNIYABEN:'સુનીયાબેન',NIDHIBEN:'નિધિબેન',URVASHIBEN:'ઉર્વશીબેન',VISHVASBHAI:'વિશ્વાસભાઈ',
+VIRJIBHAI:'વિરજીભાઈ',SUMITBHAI:'સુમિતભાઈ',SARTHAK:'સાર્થક',MITULBHAI:'મિતુલભાઈ',MITULKUMAR:'મિતુલકુમાર',
+RUTUNJAY:'રુતુંજય',DAX:'દક્ષ',TANISHKUMAR:'તનિષ્કુમાર',TANISHKKUMAR:'તનિષ્કકુમાર',BHAGYESHBHAI:'ભાગ્યેશભાઈ',
+MITALBEN:'મિતલબેન',INDRA:'ઇન્દ્રા',NIKUL:'નિકુલ',GIRISHBHAI:'ગિરીશભાઈ',ASMITKUMAR:'અસ્મિતકુમાર',
+PIYUSHBHAI:'પીયૂષભાઈ',PIYUSHKUMAR:'પીયૂષકુમાર',PIYUSH:'પીયૂષ',RAJENDRKUMAR:'રાજેન્દ્રકુમાર',
+DHRUVKUMAR:'ધ્રુવકુમાર',PRATIKKUMAR:'પ્રતીકકુમાર',AVNIBEN:'અવનીબેન',KISMATBHAI:'કિસ્મતભાઈ',
+NIKHILBHAI:'નિખિલભાઈ',SONALBEN:'સોનલબેન',KISHANBHAI:'કિશનભાઈ',KRISHBHAI:'કૃષભાઈ',
+DIVYANSHKUMAR:'દિવ્યાંશકુમાર',JAIMIN:'જૈમિન',AMITBHAI:'અમિતભાઈ',YASHKUMAR:'યશકુમાર',VIKRAMBHA:'વિક્રમભા',
+VISHALBHAI:'વિશાલભાઈ',PIMALBHAI:'પિમલભાઈ',AARTIBEN:'આરતીબેન',ARATIBEN:'આરતીબેન',ARTIBEN:'આરતીબેન',
+RUTVIBEN:'રુત્વીબેન',KAVITABEN:'કવિતાબેન',SIMABEN:'સીમાબેન',SAHIDABEN:'સહિદાબેન',HIRALBEN:'હિરલબેન',
+PALVIBEN:'પલ્વીબેન',TRUPTIBEN:'તૃપ્તિબેન',JIGNESHBHAI:'જિજ્ઞેશભાઈ',RAJDEEPBHAI:'રાજદીપભાઈ',
+JAYESHBHAI:'જયેશભાઈ',JYESHBHAI:'જયેશભાઈ',NITESHBHAI:'નિતેશભાઈ',BHUMIKABEN:'ભૂમિકાબેન',
+HARDIKABEN:'હાર્દિકાબેન',HARDIKBHAI:'હાર્દિકભાઈ',HARDIK:'હાર્દિક',ANKIT:'અંકિત',ALPESHBHAI:'અલ્પેશભાઈ',
+JAGDISHBHAI:'જગદીશભાઈ',KETANBHAI:'કેતનભાઈ',URMILABEN:'ઉર્મિલાબેન',PAYALBEN:'પાયલબેન',KHUSHIBEN:'ખુશીબેન',
+KHUSHBUBEN:'ખુશ્બૂબેન',ASTHABEN:'આસ્થાબેન',DHAVAL:'ધવલ',DHAVALBHAI:'ધવલભાઈ',YUGRAJ:'યુગરાજ',
+JAYSHRIBEN:'જયશ્રીબેન',DWARIKABEN:'દ્વારિકાબેન',MINISHBHAI:'મિનીષભાઈ',ASVINBHAI:'અશ્વિનભાઈ',
+MAHENDRABHAI:'મહેન્દ્રભાઈ',JIGARBHAI:'જીગરભાઈ',NAVINBHAI:'નવીનભાઈ',YASHBHAI:'યશભાઈ',AXITKUMAR:'અક્ષિતકુમાર',
+YASHVIBEN:'યશ્વીબેન',SAGARBHAI:'સાગરભાઈ',VAIBHAVKUMAR:'વૈભવકુમાર',ARVINABEN:'અરવિનાબેન',AMARAT:'અમરત',
+AMARATBHAI:'અમરતભાઈ',KALPESHBHAI:'કલ્પેશભાઈ',JINALBEN:'જિનલબેન',TIRTHKUMAR:'તીર્થકુમાર',
+SANJANABEN:'સંજનાબેન',RIDDHIBEN:'ઋદ્ધિબેન',SHRUSHTIBEN:'શ્રુષ્ટિબેન',JESHVIBEN:'જેશ્વીબેન',AKSHITA:'અક્ષિતા',
+MITTALBEN:'મિત્તલબેન',DHUMINKUMAR:'ધૂમિનકુમાર',JANVIBEN:'જાન્વીબેન',MAMTABEN:'મમતાબેન',MAHERBEN:'મહેરબેન',
+KANCHANBEN:'કાંચનબેન',VISHVABEN:'વિશ્વાબેન',VISHVASHBEN:'વિશ્વાસબેન',SHRMABHAI:'શ્રમભાઈ',REENABEN:'રીનાબેન',
+RINABEN:'રીનાબેન',ISHIKABEN:'ઈશિકાબેન',ASHMITABEN:'અશ્મિતાબેન',ANITABEN:'અનિતાબેન',ROSHNIBEN:'રોશનીબેન',
+NIKITABEN:'નિકિતાબેન',KIRANBHAI:'કિરણભાઈ',KHUSHALBHAI:'ખુશાલભાઈ',DIVYKUMAR:'દિવ્યકુમાર',
+RANJITBHAI:'રણજિતભાઈ',JASHVANTBHAI:'જશવંતભાઈ',HIMESHBHAI:'હિમેશભાઈ',TVINKALBEN:'ત્વિંકલબેન',YASVI:'યશ્વી',
+KRUSHIBEN:'કૃષીબેન',JALPABEN:'જલ્પાબેન',KOMALBEN:'કોમલબેન',BHAGAVATIBEN:'ભગવતીબેન',DHARATIBEN:'ધારતીબેન',
+RACHANABEN:'રચનાબેન',UMESHBHAI:'ઉમેશભાઈ',SHAYA:'શાયા',GAYTRI:'ગાયત્રી',GAYTRIBEN:'ગાયત્રીબેન',
+GAYTREEBEN:'ગાયત્રીબેન',ARJUN:'અર્જુન',DHRUVA:'ધ્રુવ',PARESHBHAI:'પરેશભાઈ',RAHULBHAI:'રાહુલભાઈ',
+SHAILESHBHAI:'શૈલેષભાઈ',NISHABEN:'નિશાબેન',DAKSHABEN:'દક્ષાબેન',MAHESHBHAI:'મહેશભાઈ',HEENABEN:'હીનાબેન',
+BANSARIBEN:'બંસરીબેન',SACHINBHAI:'સચિનભાઈ',PRATIKBHAI:'પ્રતીકભાઈ',JINTALBEN:'જિંતલબેન',RAVIBHAI:'રવિભાઈ',
+JIGNABEN:'જિજ્ઞાબેન',RUTVIKBHAI:'રુત્વિકભાઈ',RUTVIK:'રુત્વિક',DIMPALBEN:'દીપલબેન',DIMAPALBEN:'દીપલબેન',
+TUSHARBHAI:'તુષારભાઈ',MYURBHAI:'મયુરભાઈ',RINKALBEN:'રિંકલબેન',ASHOKBHAI:'અશોકભાઈ',ASHOKKUMAR:'અશોકકુમાર',
+ANSHKUMAR:'અંશકુમાર',ARUSHIBEN:'આરુષીબેન',KAILASHBHAI:'કૈલાશભાઈ',SHRVANBHAI:'શ્રવણભાઈ',SANDIPBHAI:'સંદીપભાઈ',
+SANDIPKUMAR:'સંદીપકુમાર',TAGABHAI:'તગાભાઈ',IRAFANBHAI:'ઈરફાનભાઈ',MEHULBHAI:'મેહુલભાઈ',VIDHYABEN:'વિદ્યાબેન',
+HETALBEN:'હેતલબેન',CHHAYABEN:'છાયાબેન',PRUTHVIRAJ:'પૃથ્વીરાજ',HITESHKUMAR:'હિતેશકુમાર',KAUSHIKBHAI:'કૌશિકભાઈ',
+PARVINBHAI:'પરવીનભાઈ',PRAVINBHAI:'પ્રવીણભાઈ',PRAVINKUMAR:'પ્રવીણકુમાર',SEJALBEN:'સેજલબેન',RAMILABEN:'રમિલાબેન',
+BHOOMIBEN:'ભૂમિબેન',HINABEN:'હીનાબેન',ADITYABHAI:'આદિત્યભાઈ',RITESHBHAI:'રિતેશભાઈ',JENSIBEN:'જેન્સીબેન',
+ARCHANA:'અર્ચના',DISHANT:'દિશાંત',KISTIBEN:'કિસ્તીબેન',DHRUVIBEN:'ધ્રુવીબેન',HASAMUKHBHAI:'હસમુખભાઈ',
+TANISHKA:'તનિષ્કા',URJITBHAI:'ઉર્જિતભાઈ',KINJALBEN:'કિંજલબેન',CHANSI:'ચાંસી',VINODBHAI:'વિનોદભાઈ',
+PRABHURAMBHAI:'પ્રભુરામભાઈ',PRBHURAMBHAI:'પ્રભુરામભાઈ',LAKHAMANBHAI:'લખમણભાઈ',MUKESHBHAI:'મુકેશભાઈ',
+MUKESHABHAI:'મુકેશભાઈ',RAMESHKUMAR:'રમેશકુમાર',RAMESHBHAI:'રમેશભાઈ',BHAGVANBHAI:'ભગવાનભાઈ',
+RAMJIBHAI:'રામજીભાઈ',DHANARAJBHAI:'ધનરાજભાઈ',KIRTIBHAI:'કીર્તિભાઈ',DASHRATHBHAI:'દશરથભાઈ',
+BHARATBHAI:'ભરતભાઈ',VARJANGBHAI:'વરજાંગભાઈ',VARAJANGBHAI:'વરજાંગભાઈ',DHANABHAI:'ધનાભાઈ',BABABHAI:'બાબાભાઈ',
+AGJIBHAI:'અગજીભાઈ',AGAJIBHAI:'અગજીભાઈ',NARESHBHAI:'નરેશભાઈ',VERSIBHAI:'વેરસીભાઈ',KARSHANBHAI:'કરશનભાઈ',
+KHEMJIBHAI:'ખેમજીભાઈ',KHEMJEEBHAI:'ખેમજીભાઈ',MEGJIBHAI:'મેઘજીભાઈ',SENDHABHAI:'સેંધાભાઈ',SEDHABHAI:'સેધાભાઈ',
+KUMBHABHAI:'કુંભાભાઈ',KHUMBHABHAI:'ખુંભાભાઈ',NARBATABHAI:'નરબતાભાઈ',BHANJIBHAI:'ભાંજીભાઈ',AMRATLAL:'અમરતલાલ',
+RAJABHAI:'રાજાભાઈ',LAXMANBHAI:'લક્ષ્મણભાઈ',JETSHIBHAI:'જેતશીભાઈ',JETSIBHAI:'જેતસીભાઈ',AMINBHAI:'અમીનભાઈ',
+DINESHBHAI:'દિનેશભાઈ',OKHABHAI:'ઓખાભાઈ',DALABHAI:'દલાભાઈ',DEVSIBHAI:'દેવસીભાઈ',ISWARBHAI:'ઈશ્વરભાઈ',
+ISHVARBHAI:'ઈશ્વરભાઈ',CHHAGANBHAI:'છગનભાઈ',NARESHKUMAR:'નરેશકુમાર',THANABHAI:'થાનાભાઈ',LALJIBHAI:'લાલજીભાઈ',
+BHURABHAI:'ભુરાભાઈ',RAVJIBHAI:'રવજીભાઈ',RAVAJIBHAI:'રવજીભાઈ',RAJESHBHAI:'રાજેશભાઈ',KHUMABHAI:'ખુમાભાઈ',
+VASHRAMBHAI:'વશરામભાઈ',VASHARAMBHAI:'વશરામભાઈ',VASARAMBHAI:'વસરામભાઈ',JAYENTIBHAI:'જયંતીભાઈ',
+JAYANTIBHAI:'જયંતીભાઈ',ANILBHAI:'અનિલભાઈ',ANILKUMAR:'અનિલકુમાર',PADMABHAI:'પદ્માભાઈ',SURESHBHAI:'સુરેશભાઈ',
+TEJARAMBHAI:'તેજારામભાઈ',VELABHAI:'વેલાભાઈ',PARBTABHAI:'પરબતાભાઈ',SHIVRAMBHAI:'શિવરામભાઈ',
+SHIVARAMBHAI:'શિવરામભાઈ',ARVINDBHAI:'અરવિંદભાઈ',MAFABHAI:'મફાભાઈ',KANAJI:'કાનજી',JORABHAI:'જોરાભાઈ',
+NARENDRBHAI:'નરેન્દ્રભાઈ',NARENDRAKUMAR:'નરેન્દ્રકુમાર',DEVRAJBHAI:'દેવરાજભાઈ',MERUBHAI:'મેરુભાઈ',
+HARESHBHAI:'હરેશભાઈ',MULAJIBHAI:'મુળજીભાઈ',JEHABHAI:'જેહાભાઈ',VIRAJIBHAI:'વિરજીભાઈ',JIVRAJBHAI:'જીવરાજભાઈ',
+NEMABHAI:'નેમાભાઈ',MANOJKUMAR:'મનોજકુમાર',KESHABHAI:'કેશાભાઈ',KHEMABHAI:'ખેમાભાઈ',AMRATBHAI:'અમરતભાઈ',
+MEVABHAI:'મેવાભાઈ',VASHANTBHAI:'વસંતભાઈ',HARSHENGABHAI:'હરસિંગભાઈ',PRTAPBHAI:'પ્રતાપભાઈ',
+RAMSENGBHAI:'રામસિંગભાઈ',SHAMBHUBHAI:'શંભુભાઈ',HARIRAMBHAI:'હરિરામભાઈ',MOHANBHAI:'મોહનભાઈ',
+SHIVABHAI:'શિવાભાઈ',LADHABHAI:'લાધાભાઈ',SOMABHAI:'સોમાભાઈ',HARAJIBHAI:'હરજીભાઈ',NAGARBHAI:'નાગરભાઈ',
+NILABHAI:'નીલાભાઈ',SHAMABHAI:'શમાભાઈ',JERAMBHAI:'જેરામભાઈ',SHANTIBHAI:'શાંતિભાઈ',PRAKASHBHAI:'પ્રકાશભાઈ',
+SHIVAJI:'શિવાજી',DHEGABHAI:'ધેગાભાઈ',MASHRUBHAI:'મશરૂભાઈ',KANUBHAI:'કાનુભાઈ',HARSANGABHAI:'હરસંગભાઈ',
+BHIKHABHAI:'ભીખાભાઈ',VINODKUMAR:'વિનોદકુમાર',DHANARAJ:'ધનરાજ',
+PATEL:'પટેલ',CHAUHAN:'ચૌહાણ',CHAUDHARI:'ચૌધરી',CHAUDHARY:'ચૌધરી',CHUHAN:'ચૌહાણ',RABARI:'રબારી',
+PARMAR:'પરમાર',PARAMAR:'પરમાર',PRAMAR:'પરમાર',THAKOR:'ઠાકોર',DESAI:'દેસાઈ',JOSHI:'જોષી',SUTHAR:'સુથાર',
+KOLI:'કોળી',BHIL:'ભીલ',PRAJAPATI:'પ્રજાપતિ',PRJAPATI:'પ્રજાપતિ',PRJAPAPATI:'પ્રજાપતિ',GALSAR:'ગલસર',
+GHANCHI:'ઘાંચી',GHACHI:'ઘાંચી',BAROT:'બારોટ',EPA:'એપા',EMPA:'એમ્પા',APA:'આપા',MAKVANA:'મકવાણા',
+MAKAVANA:'મકવાણા',MAKWANA:'મકવાણા',VAGHELA:'વાઘેલા',DAVE:'દવે',PALALIYA:'પલાલીયા',TURI:'તુરી',
+ASAL:'અસલ',ASHAL:'અસલ',HARIJAN:'હરિજન',NAI:'નાઈ',VARAN:'વરણ',DARAJI:'દરજી',RABA:'રાબા'
+};
+const GU_CONS = [['KSH','ક્ષ'],['GY','જ્ઞ'],['CHH','છ'],['SH','શ'],['KH','ખ'],['GH','ઘ'],['CH','ચ'],['JH','ઝ'],['TH','થ'],['DH','ધ'],['PH','ફ'],['BH','ભ'],['K','ક'],['G','ગ'],['J','જ'],['T','ટ'],['D','ડ'],['N','ન'],['P','પ'],['F','ફ'],['B','બ'],['M','મ'],['Y','ય'],['R','ર'],['L','લ'],['V','વ'],['W','વ'],['S','સ'],['H','હ'],['Z','ઝ'],['C','ક'],['Q','ક'],['X','ક્સ']];
+const GU_VOW = [['AA','ા','આ'],['EE','ી','ઈ'],['OO','ૂ','ઊ'],['AI','ૈ','ઐ'],['AU','ૌ','ઔ'],['OU','ૌ','ઔ'],['A','','અ'],['I','િ','ઇ'],['U','ુ','ઉ'],['E','ે','એ'],['O','ો','ઓ']];
+
+function translitWord(w){
+  w = w.toUpperCase();
+  let out = '', i = 0, prevCons = false;
+  while(i < w.length){
+    let hit = false;
+    for(const [lat,gu] of GU_CONS){
+      if(w.startsWith(lat,i)){
+        if(prevCons) out += '્';
+        out += gu; i += lat.length; prevCons = true; hit = true; break;
+      }
+    }
+    if(hit) continue;
+    for(const [lat,matra,indep] of GU_VOW){
+      if(w.startsWith(lat,i)){
+        out += prevCons ? matra : indep; i += lat.length; prevCons = false; hit = true; break;
+      }
+    }
+    if(!hit){ i++; }
+  }
+  return out;
+}
+function toGuj(name){
+  if(!name) return '';
+  return String(name).trim().split(/\s+/).map(word => {
+    const up = word.toUpperCase().replace(/[^A-Z]/g,'');
+    if(!up) return word;
+    if(GU_DICT[up]) return GU_DICT[up];
+    const sufs = [['KUMARBHAI','કુમારભાઈ'],['KUMAR','કુમાર'],['KUMARI','કુમારી'],['BHAI','ભાઈ'],['BEN','બેન']];
+    for(const [s,g] of sufs){
+      if(up.length > s.length + 1 && up.endsWith(s)){
+        const stem = up.slice(0, -s.length);
+        return (GU_DICT[stem] || translitWord(stem)) + g;
+      }
+    }
+    return translitWord(up);
+  }).join(' ');
+}
+
+/* =====================================================================
+   3. સ્ટેટ અને લોકલ સ્ટોરેજ
+   ===================================================================== */
+const state = { students: [], school: {}, classes: [] };
+const els = {};
+['fileInput','dropzone','uploadStatus','schoolLine','fClass','fSearch','tblStudents','listCount','btnClearNames',
+ 'regClass','regTeacher','regEstYear','regDistComm','regMonth','regYear','btnPrintFront','btnPrintInfo','btnPrintAtt','btnPrintAll',
+ 'certStudent','certSearch','certDob','certAdm','certLeave','certLastExam','certReason','certConduct',
+ 'btnLC','btnBonafide','btnDOBCert','btnCasteCert','btnIDCard','btnProfile',
+ 'custTitle','custClass','custEmpty','cChkNo','cChkName','cChkGr','cChkDob','cChkCat','cChkMobile','cChkBank','custCustomCols','btnPrintCustom',
+ 'modal','modalTitle','modalBody','statBox','classBars','catBars','specialBox'
+].forEach(id => els[id] = document.getElementById(id));
+
+function getOverrides() {
+  try { return JSON.parse(localStorage.getItem('name_overrides') || '{}'); } catch(e) { return {}; }
+}
+function saveOverride(id, newName) {
+  const ov = getOverrides();
+  if(newName) ov[id] = newName;
+  else delete ov[id];
+  localStorage.setItem('name_overrides', JSON.stringify(ov));
+}
+
+window.editName = function(id) {
+  const s = state.students.find(x => x.studentId === id);
+  if(!s) return;
+  const newName = prompt("વિદ્યાર્થીનું નામ સુધારો (અટક + નામ + વાલી):", s.fullNameGu);
+  if(newName !== null && newName.trim() !== "") {
+    s.fullNameGu = newName.trim();
+    saveOverride(id, s.fullNameGu);
+    renderStudents();
+    populateCertSelect();
+  }
+};
+
+els.btnClearNames.addEventListener('click', () => {
+  if(!confirm('બધા નામ ફરીથી એક્સેલ ફાઇલવાળા મૂળ સ્થિતિમાં લાવવા છે?')) return;
+  localStorage.removeItem('name_overrides');
+  state.students.forEach(s => {
+    s.fullNameGu = s.originalFullNameGu;
+  });
+  renderStudents();
+  populateCertSelect();
+  alert('નામ સફળતાપૂર્વક રીસેટ થઈ ગયા છે.');
+});
+
+/* =====================================================================
+   4. ટેબ નેવિગેશન
+   ===================================================================== */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+
+/* =====================================================================
+   5. એક્સેલ પાર્સિંગ
+   ===================================================================== */
+els.dropzone.addEventListener('click', () => els.fileInput.click());
+els.dropzone.addEventListener('dragover', e => { e.preventDefault(); els.dropzone.classList.add('drag'); });
+els.dropzone.addEventListener('dragleave', () => els.dropzone.classList.remove('drag'));
+els.dropzone.addEventListener('drop', e => { e.preventDefault(); els.dropzone.classList.remove('drag'); if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+els.fileInput.addEventListener('change', e => { if(e.target.files.length) handleFile(e.target.files[0]); });
+
+function normRow(row){ const o = {}; Object.keys(row).forEach(k => o[String(k).trim().toLowerCase()] = row[k]); return o; }
+function F(o, ...keys){ for(const k of keys){ const v = o[k.toLowerCase()]; if(v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim(); } return ''; }
+const clean = v => String(v||'').replace(/^'+/, '').trim();
+
+function handleFile(file){
+  els.uploadStatus.textContent = '⏳ ફાઇલ વાંચી રહ્યું છે… (' + file.name + ')';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+      if(!rows.length){ els.uploadStatus.textContent = '⚠️ ફાઇલમાં કોઈ ડેટા મળ્યો નથી.'; return; }
+
+      const overrides = getOverrides();
+      const students = [];
+      
+      rows.forEach(r => {
+        const o = normRow(r);
+        const name = clean(F(o,'StudentName'));
+        if(!name) return;
+        
+        const st = {
+          schoolId: clean(F(o,'SchoolId')), district: clean(F(o,'District')), block: clean(F(o,'Block')), village: clean(F(o,'Village')), school: clean(F(o,'School')),
+          studentId: clean(F(o,'StudentId')), name: name, father: clean(F(o,'FatherName')), mother: clean(F(o,'MotherName')), surname: clean(F(o,'SurName')),
+          dob: clean(F(o,'DOB')), gender: clean(F(o,'GENDER')), category: clean(F(o,'SOCIALCAT')), religion: clean(F(o,'RELIGION')),
+          udiseId: clean(F(o,'AadhaarUID')),
+          aadhaar: clean(F(o,'AadhaarCardNo')), 
+          grNo: clean(F(o,'GRNo')), cls: clean(F(o,'StudyingClass')), section: clean(F(o,'Section')), year: clean(F(o,'AcademicYear')), doa: clean(F(o,'DOA')),
+          mobile: clean(F(o,'MobileNo','Mobile','ContactNo')), bankAc: clean(F(o,'BankAccountNo','BankAc')), bankBranch: clean(F(o,'BankBranch','Branch')),
+          weight: clean(F(o,'Weight')), height: clean(F(o,'Height')),
+          disability: clean(F(o,'STUDENTDISABILITY')),
+          bpl: clean(F(o,'BELONGTOBPL'))
+        };
+        
+        st.nameGu = toGuj(st.name);
+        st.fatherGu = toGuj(st.father);
+        st.surnameGu = toGuj(st.surname);
+        st.originalFullNameGu = `${st.surnameGu} ${st.nameGu} ${st.fatherGu}`.trim();
+        
+        // લોકલ સ્ટોરેજમાંથી સુધારેલું નામ ચેક કરો
+        st.fullNameGu = overrides[st.studentId] || st.originalFullNameGu;
+        
+        students.push(st);
+      });
+
+      if(!students.length){ els.uploadStatus.textContent = '⚠️ વિદ્યાર્થીની હરોળ મળી નથી.'; return; }
+
+      state.students = students;
+      state.school = { school: students[0].school, udise: students[0].schoolId, district: students[0].district, block: students[0].block, village: students[0].village };
+      state.classes = [...new Set(students.map(s => s.cls))].sort((a,b) => (parseInt(a)||0) - (parseInt(b)||0));
+
+      els.uploadStatus.innerHTML = '✅ <b>' + toGujNum(students.length) + '</b> વિદ્યાર્થીના રેકોર્ડ લોડ થયા.';
+      els.schoolLine.textContent = (state.school.school || '') + ' • યુડાઇસ: ' + (state.school.udise || '');
+      
+      fillSelects(); renderStudents(); populateCertSelect(); renderDashboard();
+      document.querySelector('[data-tab="students"]').click();
+    }catch(err){
+      els.uploadStatus.textContent = '❌ ભૂલ: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* =====================================================================
+   6. સામાન્ય ફંક્શન
+   ===================================================================== */
+function classLabel(c){
+  const n = parseInt(String(c).replace(/[^0-9]/g,''), 10);
+  if(isNaN(n)) return String(c) || '—';
+  if(n >= 101) return 'બાલવાટિકા-' + toGujNum(n - 100);
+  return 'ધોરણ ' + toGujNum(n);
+}
+function classNum(c){ const n = parseInt(String(c).replace(/[^0-9]/g,''),10); return isNaN(n) ? 999 : n; }
+
+function fillSelects(){
+  const opts = state.classes.map(c => '<option value="'+esc(c)+'">'+classLabel(c)+'</option>').join('');
+  els.fClass.innerHTML = '<option value="">બધા ધોરણ</option>' + opts;
+  els.regClass.innerHTML = '<option value="">ધોરણ પસંદ કરો</option>' + opts;
+  els.custClass.innerHTML = '<option value="">બધા ધોરણ</option>' + opts;
+  els.regMonth.innerHTML = GU_MONTHS.map((m,i) => '<option value="'+(i+1)+'">'+m+'</option>').join('');
+  const y = state.students[0] && state.students[0].year ? parseInt(state.students[0].year) : new Date().getFullYear();
+  els.regYear.value = isNaN(y) ? new Date().getFullYear() : y;
+  els.regMonth.value = String(new Date().getMonth()+1);
+}
+
+/* =====================================================================
+   7. વિદ્યાર્થી યાદી
+   ===================================================================== */
+function renderStudents(){
+  const cls = els.fClass.value;
+  const q = els.fSearch.value.trim().toLowerCase();
+  let list = state.students.slice();
+  if(cls) list = list.filter(s => s.cls === cls);
+  if(q) list = list.filter(s => (s.name+' '+s.fullNameGu+' '+s.father+' '+s.grNo+' '+s.udiseId).toLowerCase().includes(q));
+  list.sort((a,b) => classNum(a.cls) - classNum(b.cls) || a.name.localeCompare(b.name));
+
+  const tb = els.tblStudents.querySelector('tbody');
+  if(!list.length){
+    tb.innerHTML = '<tr><td colspan="8" class="empty">કોઈ વિદ્યાર્થી મળ્યો નથી</td></tr>';
+  }else{
+    tb.innerHTML = list.map((s,i) =>
+      `<tr data-id="${esc(s.studentId)}">
+        <td>${toGujNum(i+1)}</td>
+        <td class="gu" style="text-align:right;">${esc(s.fullNameGu)} 
+          <button class="btn-edit" onclick="event.stopPropagation(); editName('${esc(s.studentId)}')">✏️</button>
+        </td>
+        <td class="hide-sm">${classLabel(s.cls)}</td>
+        <td>${esc(s.grNo)}</td>
+        <td>${esc(formatDOB(s.dob))}</td>
+        <td class="hide-sm">${esc(s.category)}</td>
+        <td class="hide-sm">${esc(s.mobile || '—')}</td>
+        <td class="hide-sm">${esc(s.udiseId || '—')}</td>
+      </tr>`).join('');
+  }
+  els.listCount.textContent = 'કુલ ' + toGujNum(list.length) + ' વિદ્યાર્થી.';
+}
+els.fClass.addEventListener('change', renderStudents);
+els.fSearch.addEventListener('input', renderStudents);
+
+els.tblStudents.addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-id]');
+  if(!tr) return;
+  const s = state.students.find(x => x.studentId === tr.dataset.id);
+  if(s) showModal(s);
+});
+
+function showModal(s){
+  els.modalTitle.textContent = s.nameGu + ' — વિગત';
+  const rows = [
+    ['પૂરું નામ', s.fullNameGu], ['ધોરણ', classLabel(s.cls)], ['ગ્રા.નં.', s.grNo], ['જન્મ તારીખ', formatDOB(s.dob)],
+    ['જાતિ', s.category], ['યુડાઇસ આઈડી', s.udiseId], ['મોબાઈલ', s.mobile||'—'], ['બેંક A/C', s.bankAc||'—'],
+    ['બેંક શાખા', s.bankBranch||'—'], ['આધાર કાર્ડ', s.aadhaar||'—'], ['વજન (કિ.ગ્રા.)', s.weight||'—'], ['ઊંચાઈ (સે.મી.)', s.height||'—']
+  ];
+  els.modalBody.innerHTML = rows.map(([k,v]) => '<div class="k">'+k+'</div><div class="v">'+esc(v)+'</div>').join('');
+  els.modal.classList.add('show');
+}
+function closeModal(){ els.modal.classList.remove('show'); }
+els.modal.addEventListener('click', e => { if(e.target === els.modal) closeModal(); });
+
+/* =====================================================================
+   8. ડેશબોર્ડ
+   ===================================================================== */
+function renderDashboard(){
+  const st = state.students;
+  const boys  = st.filter(s => s.gender.toLowerCase() === 'male').length;
+  const girls = st.filter(s => s.gender.toLowerCase() === 'female').length;
+  const cwsn  = st.filter(s => s.disability && !/^na$/i.test(s.disability)).length;
+  const bpl   = st.filter(s => /^yes$/i.test(s.bpl)).length;
+  const cat = {};
+  st.forEach(s => { const c = s.category || 'અન્ય'; cat[c] = (cat[c]||0) + 1; });
+
+  const cards = [
+    {v: st.length, k:'કુલ વિદ્યાર્થી', c:''},
+    {v: boys, k:'છોકરાઓ', c:'c6'},
+    {v: girls, k:'છોકરીઓ', c:'c5'},
+    {v: state.classes.length, k:'ધોરણો', c:'c2'},
+    {v: cwsn, k:'CWSN (દિવ્યાંગ)', c:'c4'},
+    {v: bpl, k:'BPL વિદ્યાર્થી', c:'c3'}
+  ];
+  els.statBox.innerHTML = cards.map(c =>
+    '<div class="stat '+c.c+'"><div class="v">'+toGujNum(c.v)+'</div><div class="k">'+c.k+'</div></div>').join('');
+
+  // ધોરણ પ્રમાણે
+  const counts = state.classes.map(c => ({c, n: st.filter(s => s.cls === c).length}));
+  const max = Math.max(...counts.map(x => x.n), 1);
+  els.classBars.innerHTML = counts.map(x =>
+    '<div class="bar-row"><div>'+classLabel(x.c)+'</div>'+
+    '<div class="bar-track"><div class="bar-fill" style="width:'+(x.n/max*100)+'%"></div></div>'+
+    '<div class="bar-num">'+toGujNum(x.n)+'</div></div>').join('');
+
+  // કેટેગરી પ્રમાણે
+  const cats = Object.entries(cat).sort((a,b) => b[1]-a[1]);
+  const cmax = Math.max(...cats.map(c => c[1]), 1);
+  els.catBars.innerHTML = cats.map(([k,v]) =>
+    '<div class="bar-row"><div>'+esc(k)+'</div>'+
+    '<div class="bar-track"><div class="bar-fill" style="width:'+(v/cmax*100)+'%; background:linear-gradient(90deg,#0aa06e,#12c48a)"></div></div>'+
+    '<div class="bar-num" style="color:#0aa06e">'+toGujNum(v)+'</div></div>').join('');
+
+  // વિશેષ નોંધ
+  const dis = {};
+  st.forEach(s => { if(s.disability && !/^na$/i.test(s.disability)) dis[s.disability] = (dis[s.disability]||0)+1; });
+  const religion = {};
+  st.forEach(s => { religion[s.religion||'—'] = (religion[s.religion||'—']||0)+1; });
+  let html = '<div style="margin-bottom:10px">';
+  html += Object.entries(dis).map(([k,v]) => '<span class="pill">'+esc(k)+' : '+toGujNum(v)+'</span>').join('') || '<span class="mut">કોઈ દિવ્યાંગતા નોંધાયેલ નથી</span>';
+  html += '</div><div>';
+  html += Object.entries(religion).map(([k,v]) => '<span class="pill" style="background:#f3edff;color:#6a3cff">'+esc(k)+' : '+toGujNum(v)+'</span>').join('');
+  html += '</div>';
+  els.specialBox.innerHTML = html;
+}
+
+/* =====================================================================
+   9. પ્રિન્ટ CSS અને સેટિંગ
+   ===================================================================== */
+const PRINT_CSS = `
+  @page { size: 8.5in 14in portrait; margin: 5mm; }
+  *{box-sizing:border-box}
+  body{font-family:'Noto Sans Gujarati','Shruti','Nirmala UI',sans-serif;margin:0;padding:0;color:#000;background:#fff; font-size:11px;}
+  
+  .page-break { page-break-before: always; }
+
+  /* Front Page */
+  .front-page { height: 98vh; display:flex; flex-direction:column; align-items:center; border: 3px double #000; padding:20px; page-break-after: always; }
+  .front-page .top-text { width:100%; display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-bottom:30px; }
+  .stamp-box { border:2px solid #000; border-radius:50%; width:80px; height:80px; display:flex; flex-direction:column; justify-content:center; align-items:center; font-size:10px; text-align:center; color:#333;}
+  .front-title { font-size:32px; font-weight:800; margin:20px 0; text-align:center; line-height:1.4; color:#111; }
+  .front-saraswati { font-size:90px; margin:20px 0; }
+  .front-since { font-size:18px; font-weight:700; margin-bottom:20px; }
+  .front-hajiri { font-size:44px; font-weight:900; border-bottom:4px solid #000; padding-bottom:5px; margin-bottom:30px; }
+  .front-details { font-size:20px; font-weight:700; margin-bottom:15px; width:80%; display:flex; justify-content:space-between; }
+  .front-summary { width:85%; border:2px solid #000; margin-top:30px; }
+  .front-summary th, .front-summary td { border:1px solid #000; padding:10px; text-align:center; font-size:16px; font-weight:bold; }
+  .front-summary th { background:#f0f0f0; }
+  
+  /* Info Tables */
+  .print-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+  .print-table th, .print-table td { border:1px solid #000; padding:6px; text-align:center; }
+  .print-table th { background:#f8f8f8; font-weight:700; }
+  .print-table td.nm { text-align:right; padding-right:8px; font-weight:700; }
+  .print-table td.adm { text-align:center; font-size:10px; }
+  .blank-row td { height:28px; }
+  
+  /* Attendance Grid */
+  .reg-table { width:100%; border-collapse:collapse; font-size:10px; table-layout: fixed; margin-bottom:5px;}
+  .reg-table th, .reg-table td { border:1px solid #000; padding:2px; text-align:center; height:24px; overflow: hidden;}
+  .reg-table th { background:#f0f0f0; font-weight:700; font-size:10px; }
+  .reg-table td.nm { text-align:right; padding-right:4px; font-weight:bold; font-size:10px; white-space: nowrap; text-overflow: ellipsis; max-width: 130px;}
+  .reg-table .sun { background:#ffeef0; }
+  .reg-table th.vert { writing-mode: vertical-rl; transform: rotate(180deg); padding:5px 2px; font-size:8px; height:50px;}
+  .reg-table tr.blank-row td { height:24px; }
+  .reg-table tr.daily-total td { font-weight:bold; background:#f8f8f8; }
+  
+  /* Signatures */
+  .signs { display:flex; justify-content:space-between; margin-top:20px; font-size:12px; font-weight:700; }
+  .signs div { text-align:center; }
+  .signs .line { border-top:1.5px solid #000; padding-top:5px; min-width:120px; }
+  
+  /* Certificates */
+  .cert-box { border:2px solid #000; padding:20px; height: 90vh; display:flex; flex-direction:column; page-break-after: always;}
+  .cert-header { text-align:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:20px; }
+  .cert-header h2 { margin:0; font-size:24px; font-weight:800; }
+  .cert-header p { margin:2px 0 0; font-size:14px; }
+  .cert-body { font-size:16px; line-height:2.2; text-align:justify; flex-grow:1; }
+  .cert-title { text-align:center; font-size:20px; font-weight:800; text-decoration:underline; margin-bottom:20px; }
+  
+  .noprint { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:99; }
+  .noprint button { background:#1e5eff; color:#fff; border:none; padding:12px 30px; border-radius:10px; font-size:16px; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.3); cursor:pointer; }
+  
+  @media print { .noprint { display:none; } }
+`;
+
+function openPrint(title, bodyHtml){
+  const w = window.open('', '_blank');
+  if(!w){ alert('પોપ-અપ બ્લોક છે. પોપ-અપ મંજૂર કરો.'); return; }
+  w.document.open();
+  w.document.write('<!DOCTYPE html><html lang="gu"><head><meta charset="utf-8">' +
+    '<title>' + esc(title) + '</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700;800&display=swap" rel="stylesheet">' +
+    '<style>' + PRINT_CSS + '</style></head><body>' + bodyHtml +
+    '<div class="noprint"><button onclick="window.print()">🖨️ પ્રિન્ટ / PDF સેવ કરો</button></div>' +
+    '</body></html>');
+  w.document.close();
+}
+
+/* =====================================================================
+   10. સેક્શન 1: ફ્રન્ટ પેજ
+   ===================================================================== */
+function getFrontPageHtml(cls, teacherName) {
+  const estYear = els.regEstYear.value || '1954';
+  const distComm = els.regDistComm.value || 'ગુજરાત પંચાયત શિક્ષણ સમિતિ પાલનપુર (બનાસકાંઠા) સંચાલિત';
+  const academicYear = (state.students[0].year || '2026-27').replace('-', '/');
+  const list = state.students.filter(s => s.cls === cls);
+
+  let boys=0, girls=0, scB=0, scG=0, stB=0, stG=0, obcB=0, obcG=0, genB=0, genG=0;
+  
+  list.forEach(s => {
+    const isBoy = s.gender.toLowerCase() === 'male';
+    if(isBoy) boys++; else girls++;
+    
+    const cat = (s.category || '').toUpperCase();
+    if(cat.includes('SC')) { if(isBoy) scB++; else scG++; }
+    else if(cat.includes('ST')) { if(isBoy) stB++; else stG++; }
+    else if(cat.includes('OBC')) { if(isBoy) obcB++; else obcG++; }
+    else { if(isBoy) genB++; else genG++; }
+  });
+
+  return `
+  <div class="front-page">
+    <div class="top-text">
+      <span>${esc(distComm)}</span>
+      <div class="stamp-box">સંક્ષિપ્ત સ્ટેમ્પ<br>આચાર્ય</div>
+    </div>
+    
+    <div class="front-title">શ્રી ${esc(state.school.school || 'ભાચર અનુપમ પગાર કેન્દ્ર શાળા')}</div>
+    <div class="front-saraswati">🕉️</div>
+    <div class="front-since">સ્થાપના વર્ષ :- ${esc(estYear)}</div>
+    
+    <div class="front-hajiri">હાજરીપત્રક</div>
+    
+    <div class="front-details">
+      <span>વર્ષ :- ${toGujNum(academicYear)}</span>
+    </div>
+    <div class="front-details">
+      <span>ધોરણ :- ${toGujNum(cls)}</span>
+      <span>વર્ગ :- A</span>
+    </div>
+    <div class="front-details" style="justify-content:center; margin-top:20px;">
+      વર્ગશિક્ષકનું નામ :- ${esc(teacherName)}
+    </div>
+    
+    <div class="front-summary">
+      <table style="width:100%; border-collapse:collapse;">
+        <tr><th colspan="6" style="font-size:20px;">તારીજ</th></tr>
+        <tr>
+          <th>જાતિ</th><th>એસ.સી.</th><th>એસ.ટી.</th><th>બક્ષીપંચ</th><th>અન્ય</th><th>કુલ</th>
+        </tr>
+        <tr>
+          <td style="text-align:right;">કુમાર</td>
+          <td>${toGujNum(scB)}</td><td>${toGujNum(stB)}</td><td>${toGujNum(obcB)}</td><td>${toGujNum(genB)}</td><td>${toGujNum(boys)}</td>
+        </tr>
+        <tr>
+          <td style="text-align:right;">કન્યા</td>
+          <td>${toGujNum(scG)}</td><td>${toGujNum(stG)}</td><td>${toGujNum(obcG)}</td><td>${toGujNum(genG)}</td><td>${toGujNum(girls)}</td>
+        </tr>
+        <tr>
+          <td style="text-align:right;">કુલ</td>
+          <td>${toGujNum(scB+scG)}</td><td>${toGujNum(stB+stG)}</td><td>${toGujNum(obcB+obcG)}</td><td>${toGujNum(genB+genG)}</td><td>${toGujNum(boys+girls)}</td>
+        </tr>
+      </table>
+    </div>
+  </div>`;
+}
+
+els.btnPrintFront.addEventListener('click', () => {
+  const cls = els.regClass.value; if(!cls) return alert('ધોરણ પસંદ કરો.');
+  const teacherName = els.regTeacher.value || '___________________';
+  openPrint('ફ્રન્ટ પેજ', getFrontPageHtml(cls, teacherName));
+});
+
+/* =====================================================================
+   11. સેક્શન 2: સામાન્ય માહિતી
+   ===================================================================== */
+function getInfoPage1Html(cls, teacherName) {
+  let list = state.students.filter(s => s.cls === cls).sort((a,b) => a.name.localeCompare(b.name));
+  let html = `
+  <div style="text-align:center; margin-bottom:15px;">
+    <h2 style="margin:0; font-size:20px;">${esc(state.school.school)}</h2>
+    <p style="margin:2px 0; font-size:12px;">ધોરણ: ${toGujNum(cls)} | વર્ગશિક્ષક: ${esc(teacherName)}</p>
+    <h3 style="margin:5px 0; font-size:16px; text-decoration:underline;">વિદ્યાર્થીઓની સામાન્ય માહિતી (પેજ 1)</h3>
+  </div>
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th style="width:5%">અ.ન.</th>
+        <th style="width:40%">વિદ્યાર્થીનું પૂરું નામ</th>
+        <th style="width:12%">જનરલ રજીસ્ટર નં.</th>
+        <th style="width:15%">જન્મ તારીખ</th>
+        <th style="width:18%">યુડાઇસ આઈડી</th>
+        <th style="width:10%">મોબાઈલ નં.</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  list.forEach((s,i) => {
+    html += `<tr>
+      <td>${toGujNum(i+1)}</td>
+      <td class="nm">${esc(s.fullNameGu)}</td>
+      <td>${esc(s.grNo)}</td>
+      <td>${esc(formatDOB(s.dob))}</td>
+      <td>${esc(s.udiseId)}</td>
+      <td>${esc(s.mobile || '')}</td>
+    </tr>`;
+  });
+  for(let e=0; e<5; e++) html += `<tr class="blank-row"><td>${toGujNum(list.length+e+1)}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  html += `</tbody></table>
+  <div class="signs"><div><div class="line">તૈયાર કરનારની સહી</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  <div class="page-break"></div>`;
+  return html;
+}
+
+function getInfoPage2Html(cls, teacherName) {
+  let list = state.students.filter(s => s.cls === cls).sort((a,b) => a.name.localeCompare(b.name));
+  let html = `
+  <div style="text-align:center; margin-bottom:15px;">
+    <h2 style="margin:0; font-size:20px;">${esc(state.school.school)}</h2>
+    <p style="margin:2px 0; font-size:12px;">ધોરણ: ${toGujNum(cls)} | વર્ગશિક્ષક: ${esc(teacherName)}</p>
+    <h3 style="margin:5px 0; font-size:16px; text-decoration:underline;">વિદ્યાર્થીઓની સામાન્ય માહિતી (પેજ 2)</h3>
+  </div>
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th style="width:5%">અ.ન.</th>
+        <th style="width:35%">વિદ્યાર્થીનું પૂરું નામ</th>
+        <th style="width:20%">બેંક એકાઉન્ટ નં.</th>
+        <th style="width:15%">શાખા</th>
+        <th style="width:15%">આધાર કાર્ડ નં.</th>
+        <th style="width:5%">વજન</th>
+        <th style="width:5%">ઊંચાઈ</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  list.forEach((s,i) => {
+    html += `<tr>
+      <td>${toGujNum(i+1)}</td>
+      <td class="nm">${esc(s.fullNameGu)}</td>
+      <td>${esc(s.bankAc || '')}</td>
+      <td>${esc(s.bankBranch || '')}</td>
+      <td>${esc(s.aadhaar || '')}</td>
+      <td>${esc(s.weight || '')}</td>
+      <td>${esc(s.height || '')}</td>
+    </tr>`;
+  });
+  for(let e=0; e<5; e++) html += `<tr class="blank-row"><td>${toGujNum(list.length+e+1)}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  html += `</tbody></table>
+  <div class="signs"><div><div class="line">તૈયાર કરનારની સહી</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  <div class="page-break"></div>`;
+  return html;
+}
+
+els.btnPrintInfo.addEventListener('click', () => {
+  const cls = els.regClass.value; if(!cls) return alert('ધોરણ પસંદ કરો.');
+  const teacherName = els.regTeacher.value || '';
+  openPrint('સામાન્ય માહિતી', getInfoPage1Html(cls, teacherName) + getInfoPage2Html(cls, teacherName));
+});
+
+/* =====================================================================
+   12. સેક્શન 3: હાજરી પત્રક ગ્રીડ
+   ===================================================================== */
+function getAttendancePagesHtml(cls, teacherName, month, year) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let list = state.students.filter(s => s.cls === cls).sort((a,b) => a.name.localeCompare(b.name));
+  
+  let workingDays = 0;
+  for(let d=1; d<=daysInMonth; d++) if(new Date(year, month-1, d).getDay() !== 0) workingDays++;
+
+  const chunkSize = 32;
+  let html = '';
+
+  if (list.length === 0) {
+    html += buildPagesForChunk([], 0, true, cls, teacherName, month, year, daysInMonth, workingDays);
+    return html;
+  }
+
+  for (let i = 0; i < list.length; i += chunkSize) {
+    const chunk = list.slice(i, i + chunkSize);
+    const isLastChunk = (i + chunkSize >= list.length);
+    html += buildPagesForChunk(chunk, i, isLastChunk, cls, teacherName, month, year, daysInMonth, workingDays);
+  }
+  
+  return html;
+}
+
+function buildPagesForChunk(chunk, startIndex, isLastChunk, cls, teacherName, month, year, daysInMonth, workingDays) {
+  const monthNameEn = GU_MONTHS[month-1];
+  const academicYear = (state.students[0].year || '2026-27').replace('-', '/');
+  const startDate = `01-${String(month).padStart(2,'0')}-${year}`;
+  const endDate = `${String(daysInMonth).padStart(2,'0')}-${String(month).padStart(2,'0')}-${year}`;
+
+  // --- LEFT PAGE (Dates 1 to 12) ---
+  let leftHtml = `
+  <div style="width:100%; border:2px solid #000; padding:5px; page-break-after: always;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="font-size:14px; font-weight:bold;">શાળાનું નામ :- ${esc(state.school.school)}</div>
+      <div style="font-size:16px; font-weight:bold;">વિદ્યાર્થીઓનું હાજરી</div>
+      <div style="font-size:12px; font-weight:bold;">તાલુકો :- ${esc(state.school.block)}</div>
+    </div>
+    <div style="font-size:14px; font-weight:bold; margin-bottom:5px;">ધોરણ :- ${toGujNum(cls)}</div>
+    
+    <table class="reg-table">
+      <thead>
+        <tr>
+          <th rowspan="3" style="width:20px;">અ.ન.</th>
+          <th rowspan="3" style="width:50px;">જ.તારીખ</th>
+          <th rowspan="3" style="width:35px;">જ.ર.નંબર</th>
+          <th rowspan="3" style="width:130px;">વિદ્યાર્થીઓનું નામ</th>
+          <th rowspan="3" style="width:45px;">ધોરણમાં દાખલ તારીખ</th>
+          <th rowspan="3" style="width:30px;">જાતિ</th>
+          <th colspan="12" style="text-align:center;">તારીખ :- ${startDate}</th>
+        </tr>
+        <tr>
+          ${Array.from({length: 12}, (_, i) => `<th>${String(i+1).padStart(2,'0')}</th>`).join('')}
+        </tr>
+        <tr>
+          ${Array.from({length: 12}, (_, i) => {
+            const dow = new Date(year, month-1, i+1).getDay();
+            return `<th class="${dow===0?'sun':''} vert">${EN_DOW_FULL[dow]}</th>`;
+          }).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  chunk.forEach((s, i) => {
+    leftHtml += `<tr>
+      <td>${toGujNum(startIndex + i + 1)}</td>
+      <td style="font-size:9px;">${esc(formatDOB(s.dob).replace(/XX/g,'..'))}</td>
+      <td>${esc(s.grNo)}</td>
+      <td class="nm" title="${esc(s.fullNameGu)}">${esc(s.fullNameGu)}</td>
+      <td style="font-size:9px;">${esc(s.doa ? s.doa.substring(0,10).replace(/XX/g,'..') : '')}</td>
+      <td>${esc(s.category)}</td>
+      ${Array.from({length: 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+1).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  if (isLastChunk) {
+    for(let e=0; e<5; e++){
+      leftHtml += `<tr class="blank-row">
+        <td>${toGujNum(startIndex + chunk.length + e + 1)}</td>
+        <td></td><td></td><td></td><td></td><td></td>
+        ${Array.from({length: 12}, (_, i) => {
+          const dow = new Date(year, month-1, i+1).getDay();
+          return `<td class="${dow===0?'sun':''}"></td>`;
+        }).join('')}
+      </tr>`;
+    }
+
+    leftHtml += `<tr class="daily-total">
+      <td colspan="6" style="text-align:right; padding-right:5px;">કુમાર હાજર</td>
+      ${Array.from({length: 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+1).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+    </tr><tr class="daily-total">
+      <td colspan="6" style="text-align:right; padding-right:5px;">કન્યા હાજર</td>
+      ${Array.from({length: 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+1).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+    </tr><tr class="daily-total">
+      <td colspan="6" style="text-align:right; padding-right:5px;">કુલ હાજર</td>
+      ${Array.from({length: 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+1).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+    </tr>`;
+  }
+
+  leftHtml += `</tbody></table></div>`;
+
+  // --- RIGHT PAGE (Dates 13 to 31 + Summary) ---
+  let rightHtml = `
+  <div style="width:100%; border:2px solid #000; padding:5px; page-break-after: always;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="font-size:14px; font-weight:bold;">પત્રક સને ${toGujNum(academicYear)}</div>
+      <div style="font-size:12px; font-weight:bold;">કુલ કાર્ય દિવસ :- ${toGujNum(workingDays)}</div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; margin-bottom:5px;">
+      <div>જિલ્લો :- ${esc(state.school.district)}</div>
+      <div>માસ :- ${monthNameEn.toUpperCase()}</div>
+      <div>થી તારીખ :- ${endDate}</div>
+    </div>
+    
+    <table class="reg-table">
+      <thead>
+        <tr>
+          <th rowspan="3" style="width:25px;">અ.ન.</th>
+          <th colspan="${daysInMonth - 12}" style="text-align:center;">તારીખ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">હાજર દિવસ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">ગેરહાજર દિવસ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">માંદગીના દિવસ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">રવિ સહિત તહેવાર</th>
+          <th rowspan="3" style="width:28px; font-size:8px;">કુલ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">ચાલુ માસના હાજર</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">ગયા માસ સુધીના</th>
+          <th rowspan="3" style="width:28px; font-size:8px;">કુલ હાજર દિવસ</th>
+          <th rowspan="3" style="width:20px; font-size:8px;">શેરો</th>
+        </tr>
+        <tr>
+          ${Array.from({length: daysInMonth - 12}, (_, i) => `<th>${String(i+13).padStart(2,'0')}</th>`).join('')}
+        </tr>
+        <tr>
+          ${Array.from({length: daysInMonth - 12}, (_, i) => {
+            const dow = new Date(year, month-1, i+13).getDay();
+            return `<th class="${dow===0?'sun':''} vert">${EN_DOW_FULL[dow]}</th>`;
+          }).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  chunk.forEach((s, i) => {
+    rightHtml += `<tr>
+      <td>${toGujNum(startIndex + i + 1)}</td>
+      ${Array.from({length: daysInMonth - 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+13).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>`;
+  });
+
+  if (isLastChunk) {
+    for(let e=0; e<5; e++){
+      rightHtml += `<tr class="blank-row">
+        <td>${toGujNum(startIndex + chunk.length + e + 1)}</td>
+        ${Array.from({length: daysInMonth - 12}, (_, i) => {
+          const dow = new Date(year, month-1, i+13).getDay();
+          return `<td class="${dow===0?'sun':''}"></td>`;
+        }).join('')}
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>`;
+    }
+
+    rightHtml += `<tr class="daily-total">
+      <td style="text-align:right; padding-right:5px;">કુમાર</td>
+      ${Array.from({length: daysInMonth - 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+13).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr><tr class="daily-total">
+      <td style="text-align:right; padding-right:5px;">કન્યા</td>
+      ${Array.from({length: daysInMonth - 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+13).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr><tr class="daily-total">
+      <td style="text-align:right; padding-right:5px;">કુલ</td>
+      ${Array.from({length: daysInMonth - 12}, (_, i) => {
+        const dow = new Date(year, month-1, i+13).getDay();
+        return `<td class="${dow===0?'sun':''}"></td>`;
+      }).join('')}
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>`;
+  }
+
+  rightHtml += `</tbody></table>
+    <div class="signs" style="margin-top:30px;">
+      <div><div class="line">તૈયાર કરનારની સહી</div></div>
+      <div><div class="line">આચાર્યની સહી</div></div>
+    </div>
+  </div>`;
+
+  return leftHtml + rightHtml;
+}
+
+els.btnPrintAtt.addEventListener('click', () => {
+  const cls = els.regClass.value; if(!cls) return alert('ધોરણ પસંદ કરો.');
+  const month = +els.regMonth.value, year = +els.regYear.value;
+  const teacherName = els.regTeacher.value || '';
+  openPrint('હાજરી પત્રક', getAttendancePagesHtml(cls, teacherName, month, year));
+});
+
+/* =====================================================================
+   13. આખું રજીસ્ટર (જૂન થી મે)
+   ===================================================================== */
+els.btnPrintAll.addEventListener('click', () => {
+  const cls = els.regClass.value; if(!cls) return alert('ધોરણ પસંદ કરો.');
+  const teacherName = els.regTeacher.value || '';
+  const startYear = +els.regYear.value;
+  
+  let fullHtml = '';
+  fullHtml += getFrontPageHtml(cls, teacherName);
+  fullHtml += getInfoPage1Html(cls, teacherName);
+  fullHtml += getInfoPage2Html(cls, teacherName);
+
+  const monthsSeq = [
+    {m:6, y:startYear}, {m:7, y:startYear}, {m:8, y:startYear}, {m:9, y:startYear},
+    {m:10, y:startYear}, {m:11, y:startYear}, {m:12, y:startYear},
+    {m:1, y:startYear+1}, {m:2, y:startYear+1}, {m:3, y:startYear+1}, {m:4, y:startYear+1}, {m:5, y:startYear+1}
+  ];
+
+  monthsSeq.forEach(mm => {
+    fullHtml += getAttendancePagesHtml(cls, teacherName, mm.m, mm.y);
+  });
+
+  openPrint('આખું રજીસ્ટર', fullHtml);
+});
+
+/* =====================================================================
+   14. પ્રમાણપત્રો
+   ===================================================================== */
+function populateCertSelect(){
+  const list = state.students.slice().sort((a,b) => classNum(a.cls) - classNum(b.cls) || a.name.localeCompare(b.name));
+  els.certStudent.innerHTML = list.map(s => '<option value="' + esc(s.studentId) + '">' + classLabel(s.cls) + ' — ' + esc(s.fullNameGu) + '</option>').join('');
+  if(list.length) selectCertStudent(list[0]);
+}
+function selectCertStudent(s){
+  els.certDob.value = formatDOB(s.dob).replace(/XX/g, '..');
+  els.certAdm.value = s.doa || '';
+  els.certLeave.value = todayGu();
+  els.certLastExam.value = classLabel(s.cls).replace('ધોરણ ', '');
+}
+els.certStudent.addEventListener('change', () => {
+  const s = state.students.find(x => x.studentId === els.certStudent.value);
+  if(s) selectCertStudent(s);
+});
+els.certSearch.addEventListener('input', () => {
+  const q = els.certSearch.value.trim().toLowerCase();
+  if(!q){ populateCertSelect(); return; }
+  const list = state.students.filter(s => (s.name + ' ' + s.fullNameGu + ' ' + s.grNo).toLowerCase().includes(q));
+  els.certStudent.innerHTML = list.map(s => '<option value="' + esc(s.studentId) + '">' + classLabel(s.cls) + ' — ' + esc(s.fullNameGu) + '</option>').join('');
+});
+
+function currentCertStudent(){
+  const s = state.students.find(x => x.studentId === els.certStudent.value);
+  if(!s){ alert('વિદ્યાર્થી પસંદ કરો.'); return null; }
+  return s;
+}
+
+function getCertHeader() {
+  return `
+  <div class="cert-header">
+    <h2>${esc(state.school.school)}</h2>
+    <p>ગ્રામ: ${esc(state.school.village)} | તાલુકો: ${esc(state.school.block)} | જિલ્લો: ${esc(state.school.district)}</p>
+    <p>યુડાઇસ કોડ: ${esc(state.school.udise)}</p>
+  </div>`;
+}
+
+els.btnLC.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  const dob = els.certDob.value, adm = els.certAdm.value, leave = els.certLeave.value;
+  const reason = els.certReason.value, conduct = els.certConduct.value;
+
+  let html = `<div class="cert-box">` + getCertHeader();
+  html += `<div class="cert-title">અભ્યાસ લીવિંગ સર્ટિફિકેટ (L.C.)</div>`;
+  html += `<div class="cert-body">
+    <table style="width:100%; font-size:16px; line-height:2.5; border:none;">
+      <tr><td style="width:40%; font-weight:bold;">૧. વિદ્યાર્થીનું નામ</td><td>: ${esc(s.fullNameGu)}</td></tr>
+      <tr><td style="font-weight:bold;">૨. જન્મ તારીખ</td><td>: ${esc(dob)}</td></tr>
+      <tr><td style="font-weight:bold;">૩. ધર્મ / જાતિ</td><td>: ${esc(s.religion)} / ${esc(s.category)}</td></tr>
+      <tr><td style="font-weight:bold;">૪. શાળામાં દાખલ તારીખ</td><td>: ${esc(adm)}</td></tr>
+      <tr><td style="font-weight:bold;">૫. શાળા છોડ્યાની તારીખ</td><td>: ${esc(leave)}</td></tr>
+      <tr><td style="font-weight:bold;">૬. છેલ્લે ભણેલું ધોરણ</td><td>: ${classLabel(s.cls)}</td></tr>
+      <tr><td style="font-weight:bold;">૭. શાળા છોડવાનું કારણ</td><td>: ${esc(reason)}</td></tr>
+      <tr><td style="font-weight:bold;">૮. વર્તન</td><td>: ${esc(conduct)}</td></tr>
+    </table>
+    <p style="margin-top:30px;">આથી પ્રમાણિત કરવામાં આવે છે કે ઉપરોક્ત વિદ્યાર્થીએ આ શાળામાં શિસ્તપૂર્વક અભ્યાસ કર્યો છે. તેમની પાસે શાળાનું કોઈ લેણું બાકી નથી.</p>
+  </div>
+  <div class="signs"><div><div class="line">કાર્યાલય સહાયક</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  </div>`;
+  openPrint('એલ.સી.', html);
+});
+
+els.btnBonafide.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  const dob = els.certDob.value, adm = els.certAdm.value;
+
+  let html = `<div class="cert-box">` + getCertHeader();
+  html += `<div class="cert-title">બોનોફાઇડ સર્ટિફિકેટ</div>`;
+  html += `<div class="cert-body">
+    <p>પ્રમાણિત કરવામાં આવે છે કે, <b>${esc(s.fullNameGu)}</b>, જન્મ તારીખ <b>${esc(dob)}</b> ધરાવે છે. તેઓ આ શાળાના <b>${classLabel(s.cls)}</b> ના નિયમિત વિદ્યાર્થી છે. તેમનો જનરલ રજીસ્ટર નંબર <b>${esc(s.grNo)}</b> છે. તેઓ તા. <b>${esc(adm)}</b> થી આ શાળામાં અભ્યાસ કરે છે. તેમની જાતિ <b>${esc(s.category)}</b> છે.</p>
+    <p>આ પ્રમાણપત્ર તેમની માંગણી અનુસાર આપવામાં આવે છે.</p>
+  </div>
+  <div class="signs"><div><div class="line">કાર્યાલય સહાયક</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  </div>`;
+  openPrint('બોનોફાઇડ', html);
+});
+
+els.btnDOBCert.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  const dob = els.certDob.value;
+  let html = `<div class="cert-box">` + getCertHeader();
+  html += `<div class="cert-title">જન્મ તારીખનો દાખલો</div>`;
+  html += `<div class="cert-body">
+    <p>પ્રમાણિત કરવામાં આવે છે કે, <b>${esc(s.fullNameGu)}</b> ની જન્મ તારીખ <b>${esc(dob)}</b> છે. તેમની ઉંમર શાળાના રેકોર્ડ મુજબ ચાલુ શૈક્ષણિક વર્ષમાં યોગ્ય છે.</p>
+    <p>આ દાખલો તેમની માંગણી અનુસાર આપવામાં આવે છે.</p>
+  </div>
+  <div class="signs"><div><div class="line">કાર્યાલય સહાયક</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  </div>`;
+  openPrint('જન્મ તારીખનો દાખલો', html);
+});
+
+els.btnCasteCert.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  let html = `<div class="cert-box">` + getCertHeader();
+  html += `<div class="cert-title">જાતિનો દાખલો</div>`;
+  html += `<div class="cert-body">
+    <p>પ્રમાણિત કરવામાં આવે છે કે, <b>${esc(s.fullNameGu)}</b> ની જાતિ <b>${esc(s.category)}</b> અને ધર્મ <b>${esc(s.religion)}</b> છે. તેઓ આ શાળાના <b>${classLabel(s.cls)}</b> ના વિદ્યાર્થી છે.</p>
+    <p>આ દાખલો તેમની માંગણી અનુસાર આપવામાં આવે છે.</p>
+  </div>
+  <div class="signs"><div><div class="line">કાર્યાલય સહાયક</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  </div>`;
+  openPrint('જાતિનો દાખલો', html);
+});
+
+els.btnIDCard.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  let html = `
+  <div style="width: 3.5in; height: 2.2in; border: 2px solid #000; border-radius:10px; padding:10px; margin: 20px auto; position:relative; background:#f8faff;">
+    <div style="text-align:center; border-bottom:1.5px solid #000; padding-bottom:5px; margin-bottom:8px;">
+      <h4 style="margin:0; font-size:14px;">${esc(state.school.school)}</h4>
+      <p style="margin:0; font-size:10px;">યુડાઇસ: ${esc(state.school.udise)}</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <div style="width:60px; height:70px; border:1px solid #000; text-align:center; line-height:70px; font-size:10px; background:#eee;">ફોટો</div>
+      <div style="font-size:12px; line-height:1.8;">
+        <b>નામ:</b> ${esc(s.fullNameGu)}<br>
+        <b>ધોરણ:</b> ${classLabel(s.cls)}<br>
+        <b>જન્મ તારીખ:</b> ${esc(formatDOB(s.dob))}<br>
+        <b>ગ્રા.નં.:</b> ${esc(s.grNo)}
+      </div>
+    </div>
+    <div style="position:absolute; bottom:5px; right:10px; font-size:10px; font-weight:bold;">આચાર્ય સહી</div>
+  </div>`;
+  openPrint('આઈ-કાર્ડ', html);
+});
+
+els.btnProfile.addEventListener('click', () => {
+  const s = currentCertStudent(); if(!s) return;
+  let html = `<div class="cert-box">` + getCertHeader();
+  html += `<div class="cert-title">વિદ્યાર્થી પ્રોફાઈલ</div>`;
+  html += `<div class="cert-body">
+    <table style="width:100%; font-size:15px; line-height:2;">
+      <tr><td style="width:40%; font-weight:bold;">પૂરું નામ</td><td>: ${esc(s.fullNameGu)}</td></tr>
+      <tr><td style="font-weight:bold;">વિદ્યાર્થી ID</td><td>: ${esc(s.studentId)}</td></tr>
+      <tr><td style="font-weight:bold;">ધોરણ / વર્ગ</td><td>: ${classLabel(s.cls)} / ${esc(s.section)}</td></tr>
+      <tr><td style="font-weight:bold;">જન્મ તારીખ</td><td>: ${esc(formatDOB(s.dob))}</td></tr>
+      <tr><td style="font-weight:bold;">લિંગ</td><td>: ${esc(s.gender)}</td></tr>
+      <tr><td style="font-weight:bold;">જાતિ / ધર્મ</td><td>: ${esc(s.category)} / ${esc(s.religion)}</td></tr>
+      <tr><td style="font-weight:bold;">યુડાઇસ આઈડી</td><td>: ${esc(s.udiseId)}</td></tr>
+      <tr><td style="font-weight:bold;">મોબાઈલ</td><td>: ${esc(s.mobile || '—')}</td></tr>
+      <tr><td style="font-weight:bold;">બેંક A/C / શાખા</td><td>: ${esc(s.bankAc || '—')} / ${esc(s.bankBranch || '—')}</td></tr>
+      <tr><td style="font-weight:bold;">આધાર કાર્ડ નં.</td><td>: ${esc(s.aadhaar || '—')}</td></tr>
+      <tr><td style="font-weight:bold;">વજન / ઊંચાઈ</td><td>: ${esc(s.weight || '—')} કિ.ગ્રા. / ${esc(s.height || '—')} સે.મી.</td></tr>
+    </table>
+  </div>
+  <div class="signs"><div><div class="line">વાલીની સહી</div></div><div><div class="line">આચાર્યની સહી</div></div></div>
+  </div>`;
+  openPrint('પ્રોફાઈલ', html);
+});
+
+/* =====================================================================
+   15. કસ્ટમ ટેબલ
+   ===================================================================== */
+els.btnPrintCustom.addEventListener('click', () => {
+  if(!state.students.length) return alert('પહેલા ફાઇલ અપલોડ કરો.');
+  const title = els.custTitle.value || 'યાદી';
+  const cls = els.custClass.value;
+  const emptyRows = parseInt(els.custEmpty.value) || 0;
+  
+  const cols = [];
+  if(document.getElementById('cChkNo').checked) cols.push({ key: 'no', label: 'ક્રમાંક', width: '5%' });
+  if(document.getElementById('cChkName').checked) cols.push({ key: 'name', label: 'વિદ્યાર્થીનું પૂરું નામ', width: '25%', right:true });
+  if(document.getElementById('cChkGr').checked) cols.push({ key: 'gr', label: 'ગ્રા.નં.', width: '8%' });
+  if(document.getElementById('cChkDob').checked) cols.push({ key: 'dob', label: 'જન્મ તારીખ', width: '10%' });
+  if(document.getElementById('cChkCat').checked) cols.push({ key: 'cat', label: 'કેટેગરી', width: '8%' });
+  if(document.getElementById('cChkMobile').checked) cols.push({ key: 'mobile', label: 'મોબાઈલ', width: '10%' });
+  if(document.getElementById('cChkBank').checked) cols.push({ key: 'bank', label: 'બેંક A/C', width: '12%' });
+  
+  // નવા ઉમેરેલા કોલમ
+  if(document.getElementById('cChkClass').checked) cols.push({ key: 'class', label: 'ધોરણ', width: '8%' });
+  if(document.getElementById('cChkGender').checked) cols.push({ key: 'gender', label: 'જાતિ', width: '8%' });
+  if(document.getElementById('cChkUdise').checked) cols.push({ key: 'udise', label: 'યુડાઇસ નંબર', width: '12%' });
+  if(document.getElementById('cChkAadhaar').checked) cols.push({ key: 'aadhaar', label: 'આધાર નંબર', width: '12%' });
+  if(document.getElementById('cChkDisability').checked) cols.push({ key: 'disability', label: 'વિકલાંગતા', width: '8%' });
+  if(document.getElementById('cChkBPL').checked) cols.push({ key: 'bpl', label: 'BPL', width: '6%' });
+  
+  const customStr = els.custCustomCols.value.trim();
+  if(customStr){
+    customStr.split(',').map(s => s.trim()).filter(s => s).forEach((c, i) => cols.push({ key: 'custom_' + i, label: c, width: '12%' }));
+  }
+  if(!cols.length) return alert('ઓછામાં ઓછી એક કોલમ પસંદ કરો.');
+
+  let list = state.students.slice();
+  if(cls) list = list.filter(s => s.cls === cls);
+  list.sort((a,b) => classNum(a.cls) - classNum(b.cls) || a.name.localeCompare(b.name));
+
+  let html = `<div style="text-align:center; margin-bottom:15px;">
+    <h2 style="margin:0; font-size:20px;">${esc(state.school.school)}</h2>
+    <h3 style="margin:5px 0; font-size:16px; text-decoration:underline;">${esc(title)}</h3>
+  </div>`;
+  
+  html += '<table class="print-table"><thead><tr>';
+  cols.forEach(c => html += `<th style="width:${c.width}">${esc(c.label)}</th>`);
+  html += '</tr></thead><tbody>';
+  
+  list.forEach((s, i) => {
+    html += '<tr>';
+    cols.forEach(c => {
+      let val = '';
+      if(c.key === 'no') val = toGujNum(i+1);
+      else if(c.key === 'name') val = `<b>${esc(s.fullNameGu)}</b>`;
+      else if(c.key === 'gr') val = esc(s.grNo);
+      else if(c.key === 'dob') val = esc(formatDOB(s.dob));
+      else if(c.key === 'cat') val = esc(s.category);
+      else if(c.key === 'mobile') val = esc(s.mobile || '');
+      else if(c.key === 'bank') val = esc(s.bankAc || '');
+      
+      // નવા કોલમ માટેની માહિતી
+      else if(c.key === 'class') val = classLabel(s.cls);
+      else if(c.key === 'gender') val = s.gender === 'Male' ? 'પુરુષ' : s.gender === 'Female' ? 'સ્ત્રી' : esc(s.gender);
+      else if(c.key === 'udise') val = esc(s.udiseId || '');
+      else if(c.key === 'aadhaar') val = esc(s.aadhaar || '');
+      else if(c.key === 'disability') val = esc(s.disability || 'NA');
+      else if(c.key === 'bpl') val = esc(s.bpl || 'No');
+      
+      html += `<td style="text-align:${c.right?'right':'center'}">${val}</td>`;
+    });
+    html += '</tr>';
+  });
+  
+  for(let e=0; e<emptyRows; e++){
+    html += '<tr class="blank-row">';
+    cols.forEach((c, idx) => {
+      let val = (idx === 0 && c.key === 'no') ? toGujNum(list.length + e + 1) : '';
+      html += `<td>${val}</td>`;
+    });
+    html += '</tr>';
+  }
+  
+  html += '</tbody></table>';
+  html += '<div class="signs"><div><div class="line">તૈયાર કરનારની સહી</div></div><div><div class="line">આચાર્યની સહી</div></div></div>';
+  openPrint(title, html);
+});
+</script>
+</body>
+</html>
